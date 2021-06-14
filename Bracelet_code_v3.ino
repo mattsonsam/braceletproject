@@ -14,6 +14,7 @@ float gyro_x, gyro_y, gyro_z;
 #endif
 #define PIN            13
 #define NUMPIXELS      11
+int n = 0; //index for which light pattern is selected when in alone mode
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 int delayval = 50;
 //end of neopixel setup
@@ -80,70 +81,78 @@ void startAdv(void) // describes how to advertise prior to connecting
   Bluefruit.Advertising.setFastTimeout(30);      // number of seconds in fast mode
   Bluefruit.Advertising.start(0);                // 0 = Don't stop advertising after n seconds
 }
-void bracelet_alone(){
-
-  /*for(int i=0;i<NUMPIXELS;i++){
-
-    // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
-    pixels.setPixelColor(i, pixels.Color(250,10,50)); // Moderately bright green color.
-
-    pixels.show(); // This sends the updated pixel color to the hardware.
-
-    delay(delayval); // Delay for a period of time (in milliseconds).
-  }*/
- // pixels.setPixelColor(0,pixels.Color(0,0,0));
-  //pixels.show();
-  lsm6ds33.setGyroRange(LSM6DS_GYRO_RANGE_2000_DPS);
+void bracelet_alone(int n){
+  /*lsm6ds33.setGyroRange(LSM6DS_GYRO_RANGE_2000_DPS);
   sensors_event_t accel;
   sensors_event_t gyro;
   sensors_event_t temp;
-  for (int n=0; n<3; n++){
   lsm6ds33.getEvent(&accel, &gyro, &temp);
   gyro_y = gyro.gyro.y*57.29;
-    if(gyro_y>700){
-      for(int i=0;i<NUMPIXELS;i++){
-
-    // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
-        pixels.setPixelColor(i, pixels.Color((5+10*n)*i,10,20+i)); // Moderately bright green color.
-
-       pixels.show(); // This sends the updated pixel color to the hardware.
-
-       delay(delayval-10*n); // Delay for a period of time (in milliseconds).
-
-  }
-        for(int i=NUMPIXELS;i>=0;i=i-1){
-
-    // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
-        pixels.setPixelColor(i, pixels.Color(0,0,0)); // Moderately bright green color.
-
-        pixels.show(); // This sends the updated pixel color to the hardware.
-
-        delay(delayval-10*n); // Delay for a period of time (in milliseconds).
-
-  }
- pixels.clear();
   
-    
+  if((gyro_y>700)&&(n<3)){ //select which color pattern you want
+    n=n+1;
+  }
+
+  if((gyro_y<700)&&(n>0)){ //select which color pattern you want
+    n=n-1;
+  }*/
+
+  if(n==0){ //first color pattern lights up sequential 
+    for(int i=0; i<NUMPIXELS; i++){
+      pixels.setPixelColor(i, pixels.Color(140-7*i,42+7*i,245));
+      pixels.show();
+      delay(delayval);
+    }
+    for(int i=NUMPIXELS; i>=0; i=i-1){
+      pixels.setPixelColor(i, pixels.Color(0,0,0));
+      pixels.show();
+      delay(delayval);
+    }
+    pixels.clear();
+  }
+
+  if(n==1){ // single led at a time in a loop
+    for(int i=0; i<NUMPIXELS; i++){
+      pixels.setPixelColor(i,pixels.Color(245, 37, 213));
+      pixels.show();
+      delay(delayval/2);
+      pixels.setPixelColor(i, pixels.Color(0,0,0));
+      pixels.show();
+      pixels.clear();
     }
   }
-  
 
+  if(n==2){  //fades in and out
+    for(int j=0; j<20;j++){
+      for(int i=0; i<NUMPIXELS; i++){
+        pixels.setPixelColor(i,pixels.Color(0,j*12,0));
+        pixels.show();
+        delay(delayval/10);
+      }
+    }
+
+    for(int j=20; j>20;j=j-1){
+      for(int i=0; i<NUMPIXELS; i++){
+        pixels.setPixelColor(i,pixels.Color(0,j*12,0));
+        pixels.show();
+        delay(delayval/10);
+      }
+    }
+    pixels.clear();
+  }
+  
 }
 
 void bracelet_together(){
   for(int i=0;i<NUMPIXELS;i++){
-
-    // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
-    pixels.setPixelColor(i, pixels.Color(3,10*i,2+2*i)); // Moderately bright green color.
+    pixels.setPixelColor(i, pixels.Color(3,10*i,2+2*i)); 
 
     pixels.show(); // This sends the updated pixel color to the hardware.
 
     delay(delayval); // Delay for a period of time (in milliseconds).
 }
   for(int i=NUMPIXELS;i>=0;i=i-1){
-
-    // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
-    pixels.setPixelColor(i, pixels.Color(0,0,0)); // Moderately bright green color.
+    pixels.setPixelColor(i, pixels.Color(0,0,0)); 
 
     pixels.show(); // This sends the updated pixel color to the hardware.
 
@@ -158,6 +167,20 @@ void bracelet_together(){
 
 
 void loop() {
+   lsm6ds33.setGyroRange(LSM6DS_GYRO_RANGE_2000_DPS);
+   sensors_event_t accel;
+   sensors_event_t gyro;
+   sensors_event_t temp;
+   lsm6ds33.getEvent(&accel, &gyro, &temp);
+   gyro_y = gyro.gyro.y*57.29;
+  
+   if((gyro_y>700)&&(n<3)){ //select which color pattern you want
+     n=n+1;
+   }
+
+   if((gyro_y<700)&&(n>0)){ //select which color pattern you want
+     n=n-1;
+   }
   
   if ( Bluefruit.connected() )
   {
@@ -177,12 +200,12 @@ void loop() {
       bracelet_together();
     }
     if(rssi<-40){
-      bracelet_alone();
+      bracelet_alone(n);
+     }
+  }
+    if (!Bluefruit.connected()){
+      bracelet_alone(n);
     }
-  }
-  if (!Bluefruit.connected()){
-  bracelet_alone();
-  }
   
 }
 
